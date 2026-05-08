@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Demo API - Usine Jus</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f7fb;
+            color: #172033;
+        }
+        main {
+            width: min(1100px, calc(100vw - 32px));
+            margin: 28px auto;
+        }
+        h1 { margin: 0 0 8px; }
+        p { color: #5d697c; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 18px;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid #dfe6ef;
+            border-radius: 8px;
+            padding: 18px;
+            box-shadow: 0 10px 26px rgba(15, 30, 50, .06);
+        }
+        label {
+            display: grid;
+            gap: 6px;
+            margin-bottom: 12px;
+            color: #38465a;
+            font-size: 14px;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font: inherit;
+        }
+        button {
+            border: 0;
+            border-radius: 6px;
+            padding: 10px 13px;
+            background: #1f6feb;
+            color: #fff;
+            font: inherit;
+            cursor: pointer;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        button.secondary { background: #40546d; }
+        button.danger { background: #c83232; }
+        pre {
+            background: #101826;
+            color: #d7e4f5;
+            border-radius: 8px;
+            padding: 14px;
+            overflow: auto;
+            min-height: 180px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        th, td {
+            text-align: left;
+            border-bottom: 1px solid #e7edf5;
+            padding: 9px;
+        }
+        th { background: #f8fafc; color: #53627a; font-size: 13px; }
+        .status {
+            padding: 10px 12px;
+            border-radius: 6px;
+            background: #eef6ff;
+            color: #194d82;
+            margin-top: 12px;
+        }
+        @media (max-width: 760px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Demo API Usine Jus</h1>
+    <p>Ce fichier vanilla HTML/CSS/JS montre comment consommer ton API Laravel avec <code>fetch</code>.</p>
+
+    <div class="grid">
+        <section class="card">
+            <h2>1. Connexion API</h2>
+            <label>Email
+                <input id="email" type="email" value="admin@usine-jus.test">
+            </label>
+            <label>Mot de passe
+                <input id="password" type="password" value="password">
+            </label>
+            <button id="loginBtn">Se connecter</button>
+            <button class="secondary" id="meBtn">Verifier /api/me</button>
+            <div class="status" id="tokenStatus">Aucun token pour le moment.</div>
+        </section>
+
+        <section class="card">
+            <h2>2. Lire les donnees</h2>
+            <button id="productsBtn">Charger les produits</button>
+            <button id="clientsBtn">Charger les clients</button>
+            <button id="materialsBtn">Charger les matieres</button>
+            <div id="tableTarget"></div>
+        </section>
+
+        <section class="card">
+            <h2>3. Creer un client via API</h2>
+            <label>Nom du client
+                <input id="clientName" value="Client API Demo">
+            </label>
+            <label>Telephone
+                <input id="clientPhone" value="+237 699 000 000">
+            </label>
+            <button id="createClientBtn">Creer le client</button>
+        </section>
+
+        <section class="card">
+            <h2>4. Reponse brute JSON</h2>
+            <pre id="output">Les reponses API apparaitront ici.</pre>
+        </section>
+    </div>
+</main>
+
+<script>
+    const apiBase = window.location.origin + '/api';
+    let token = localStorage.getItem('usine_jus_api_token') || '';
+
+    const output = document.querySelector('#output');
+    const tokenStatus = document.querySelector('#tokenStatus');
+    const tableTarget = document.querySelector('#tableTarget');
+
+    function show(data) {
+        output.textContent = JSON.stringify(data, null, 2);
+    }
+
+    function setToken(newToken) {
+        token = newToken;
+        localStorage.setItem('usine_jus_api_token', token);
+        tokenStatus.textContent = 'Token present. Tu peux maintenant appeler les routes protegees.';
+    }
+
+    function refreshTokenStatus() {
+        tokenStatus.textContent = token
+            ? 'Token deja present dans localStorage.'
+            : 'Aucun token pour le moment.';
+    }
+
+    async function apiRequest(path, options = {}) {
+        const response = await fetch(apiBase + path, {
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+                ...(options.headers || {})
+            },
+            ...options
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw {
+                status: response.status,
+                data
+            };
+        }
+
+        return data;
+    }
+
+    function renderTable(rows, columns) {
+        if (!rows.length) {
+            tableTarget.innerHTML = '<p>Aucune donnee trouvee.</p>';
+            return;
+        }
+
+        tableTarget.innerHTML = `
+            <table>
+                <thead>
+                    <tr>${columns.map(col => `<th>${col.label}</th>`).join('')}</tr>
+                </thead>
+                <tbody>
+                    ${rows.map(row => `
+                        <tr>
+                            ${columns.map(col => `<td>${row[col.key] ?? ''}</td>`).join('')}
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    async function run(action) {
+        try {
+            const data = await action();
+            show(data);
+            return data;
+        } catch (error) {
+            show(error);
+        }
+    }
+
+    document.querySelector('#loginBtn').addEventListener('click', () => run(async () => {
+        const data = await apiRequest('/login', {
+            method: 'POST',
+            body: JSON.stringify({
+                email: document.querySelector('#email').value,
+                password: document.querySelector('#password').value
+            })
+        });
+
+        setToken(data.access_token);
+        return data;
+    }));
+
+    document.querySelector('#meBtn').addEventListener('click', () => run(() => apiRequest('/me')));
+
+    document.querySelector('#productsBtn').addEventListener('click', () => run(async () => {
+        const data = await apiRequest('/products');
+        renderTable(data.data || [], [
+            { key: 'id', label: 'ID' },
+            { key: 'name', label: 'Produit' },
+            { key: 'stock_quantity', label: 'Stock' },
+            { key: 'sale_price', label: 'Prix' }
+        ]);
+        return data;
+    }));
+
+    document.querySelector('#clientsBtn').addEventListener('click', () => run(async () => {
+        const data = await apiRequest('/clients');
+        renderTable(data.data || [], [
+            { key: 'id', label: 'ID' },
+            { key: 'name', label: 'Client' },
+            { key: 'phone', label: 'Telephone' },
+            { key: 'email', label: 'Email' }
+        ]);
+        return data;
+    }));
+
+    document.querySelector('#materialsBtn').addEventListener('click', () => run(async () => {
+        const data = await apiRequest('/raw-materials');
+        renderTable(data.data || [], [
+            { key: 'id', label: 'ID' },
+            { key: 'name', label: 'Matiere' },
+            { key: 'stock_quantity', label: 'Stock' },
+            { key: 'unit_cost', label: 'Cout' }
+        ]);
+        return data;
+    }));
+
+    document.querySelector('#createClientBtn').addEventListener('click', () => run(() => apiRequest('/clients', {
+        method: 'POST',
+        body: JSON.stringify({
+            name: document.querySelector('#clientName').value,
+            phone: document.querySelector('#clientPhone').value,
+            email: '',
+            address: 'Cree depuis api-demo.html'
+        })
+    })));
+
+    refreshTokenStatus();
+</script>
+</body>
+</html>
