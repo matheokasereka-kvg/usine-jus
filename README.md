@@ -12,6 +12,34 @@ php artisan migrate:fresh --seed
 php artisan serve
 ```
 
+
+### Lancer dans le navigateur
+
+La page d'accueil `/` redirige maintenant vers `/login` si l'utilisateur n'est pas connecte, puis vers `/dashboard` apres connexion.
+
+Commandes recommandees :
+
+```bash
+php artisan serve
+```
+
+Puis ouvrir `http://127.0.0.1:8000`.
+
+Si une ancienne page Laravel reste affichee apres modification des routes, vider le cache Laravel :
+
+```bash
+php artisan optimize:clear
+```
+
+Si tu utilises le serveur PHP sans Artisan, il faut pointer vers le dossier `public` :
+
+```bash
+php -S 127.0.0.1:8000 -t public
+```
+
+Avec XAMPP/WAMP/Apache, le mieux est de configurer le DocumentRoot sur `public`. Un fichier `.htaccess` a aussi ete ajoute a la racine pour rediriger vers `public/` si Apache pointe temporairement vers la racine du projet.
+
+
 Par defaut le projet utilise SQLite via `database/database.sqlite`. Pour XAMPP ou WAMP avec MySQL, cree une base `usine_jus` puis configure `.env` ainsi :
 
 ```env
@@ -76,6 +104,47 @@ Accept: application/json
 - `GET|PUT|PATCH|DELETE /api/clients/{id}`
 - `GET|POST|DELETE /api/productions`
 - `GET|POST|DELETE /api/orders`
+
+
+### API internes dashboard (protegees)
+
+Ces routes utilisent aussi l'en-tete `Authorization: Bearer <access_token>`.
+
+- `GET /api/internal/dashboard-summary` : retourne les compteurs metier, le total des ventes, la valeur du stock produits, le cout du stock matieres, les commandes par statut et les 5 dernieres commandes.
+- `GET /api/internal/stock-alerts` : retourne les produits et matieres premieres dont le stock est inferieur ou egal au seuil d'alerte.
+
+Exemple :
+
+```http
+GET /api/internal/dashboard-summary
+Authorization: Bearer <access_token>
+Accept: application/json
+```
+
+### API externes publiques
+
+Ces routes sont prevues pour un portail externe ou une integration partenaire. Elles ne modifient pas le stock.
+
+- `GET /api/external/catalog` : liste les produits disponibles, leur SKU, leur quantite disponible et leur prix public en XAF.
+- `POST /api/external/quotes` : calcule un devis a partir des SKU et quantites demandees, avec un indicateur `can_fulfill`.
+
+Exemple de devis :
+
+```http
+POST /api/external/quotes
+Content-Type: application/json
+Accept: application/json
+
+{
+  "items": [
+    { "sku": "JUS-MANGUE-50", "quantity": 3 }
+  ]
+}
+```
+
+### Demo HTML API
+
+Une page statique de test est disponible dans `public/api-demo.html`. Elle permet de se connecter, lire les ressources protegees, consulter les nouvelles API internes dashboard et tester les nouvelles API externes catalogue/devis.
 
 ### Exemple production
 

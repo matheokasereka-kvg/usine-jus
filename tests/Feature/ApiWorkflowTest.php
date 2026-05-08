@@ -67,4 +67,73 @@ class ApiWorkflowTest extends TestCase
 
         $this->assertDatabaseHas('products', ['id' => $product->id, 'stock_quantity' => 7]);
     }
+
+    public function test_internal_dashboard_and_stock_alert_apis(): void
+    {
+        User::create([
+            'name' => 'Admin',
+            'email' => 'admin@test.local',
+            'password' => 'password',
+            'role' => 'admin',
+        ]);
+
+        $token = $this->postJson('/api/login', [
+            'email' => 'admin@test.local',
+            'password' => 'password',
+        ])->assertOk()->json('access_token');
+
+        Product::create([
+            'name' => 'Jus orange',
+            'sku' => 'JO-50',
+            'unit' => 'bouteille',
+            'stock_quantity' => 2,
+            'sale_price' => 1000,
+            'alert_threshold' => 5,
+        ]);
+        RawMaterial::create([
+            'name' => 'Orange',
+            'unit' => 'kg',
+            'stock_quantity' => 4,
+            'unit_cost' => 300,
+            'alert_threshold' => 10,
+        ]);
+
+        $this->withToken($token)->getJson('/api/internal/dashboard-summary')
+            ->assertOk()
+            ->assertJsonPath('counts.products', 1)
+            ->assertJsonPath('finance.product_stock_value', 2000);
+
+        $this->withToken($token)->getJson('/api/internal/stock-alerts')
+            ->assertOk()
+            ->assertJsonPath('total_alerts', 2)
+            ->assertJsonPath('products.0.sku', 'JO-50')
+            ->assertJsonPath('raw_materials.0.name', 'Orange');
+    }
+
+    public function test_external_catalog_and_quote_apis(): void
+    {
+        Product::create([
+            'name' => 'Jus mangue',
+            'sku' => 'JM-50',
+            'unit' => 'bouteille',
+            'stock_quantity' => 12,
+            'sale_price' => 1200,
+            'alert_threshold' => 3,
+        ]);
+
+        $this->getJson('/api/external/catalog')
+            ->assertOk()
+            ->assertJsonPath('data.0.sku', 'JM-50')
+            ->assertJsonPath('data.0.currency', 'XAF');
+
+        $this->postJson('/api/external/quotes', [
+            'items' => [
+                ['sku' => 'JM-50', 'quantity' => 3],
+            ],
+        ])->assertOk()
+            ->assertJsonPath('subtotal', 3600)
+            ->assertJsonPath('can_fulfill', true)
+            ->assertJsonPath('lines.0.available_quantity', 12);
+    }
+
 }
