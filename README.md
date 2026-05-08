@@ -12,6 +12,34 @@ php artisan migrate:fresh --seed
 php artisan serve
 ```
 
+
+### Lancer dans le navigateur
+
+La page d'accueil `/` redirige maintenant vers `/login` si l'utilisateur n'est pas connecte, puis vers `/dashboard` apres connexion.
+
+Commandes recommandees :
+
+```bash
+php artisan serve
+```
+
+Puis ouvrir `http://127.0.0.1:8000`.
+
+Si une ancienne page Laravel reste affichee apres modification des routes, vider le cache Laravel :
+
+```bash
+php artisan optimize:clear
+```
+
+Si tu utilises le serveur PHP sans Artisan, il faut pointer vers le dossier `public` :
+
+```bash
+php -S 127.0.0.1:8000 -t public
+```
+
+Avec XAMPP/WAMP/Apache, le mieux est de configurer le DocumentRoot sur `public`. Un fichier `.htaccess` a aussi ete ajoute a la racine pour rediriger vers `public/` si Apache pointe temporairement vers la racine du projet.
+
+
 Par defaut le projet utilise SQLite via `database/database.sqlite`. Pour XAMPP ou WAMP avec MySQL, cree une base `usine_jus` puis configure `.env` ainsi :
 
 ```env

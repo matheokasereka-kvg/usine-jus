@@ -68,6 +68,20 @@ class WebWorkflowTest extends TestCase
         $this->assertDatabaseHas('products', ['id' => $product->id, 'stock_quantity' => 6]);
     }
 
+    public function test_home_route_sends_guests_to_login_and_users_to_dashboard(): void
+    {
+        $this->get('/')->assertRedirect('/login');
+
+        $user = User::create([
+            'name' => 'Admin',
+            'email' => 'admin@test.local',
+            'password' => 'password',
+            'role' => 'admin',
+        ]);
+
+        $this->actingAs($user)->get('/')->assertRedirect('/dashboard');
+    }
+
     public function test_authenticated_user_can_open_main_navigation_pages(): void
     {
         $user = User::create([
