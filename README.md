@@ -77,6 +77,47 @@ Accept: application/json
 - `GET|POST|DELETE /api/productions`
 - `GET|POST|DELETE /api/orders`
 
+
+### API internes dashboard (protegees)
+
+Ces routes utilisent aussi l'en-tete `Authorization: Bearer <access_token>`.
+
+- `GET /api/internal/dashboard-summary` : retourne les compteurs metier, le total des ventes, la valeur du stock produits, le cout du stock matieres, les commandes par statut et les 5 dernieres commandes.
+- `GET /api/internal/stock-alerts` : retourne les produits et matieres premieres dont le stock est inferieur ou egal au seuil d'alerte.
+
+Exemple :
+
+```http
+GET /api/internal/dashboard-summary
+Authorization: Bearer <access_token>
+Accept: application/json
+```
+
+### API externes publiques
+
+Ces routes sont prevues pour un portail externe ou une integration partenaire. Elles ne modifient pas le stock.
+
+- `GET /api/external/catalog` : liste les produits disponibles, leur SKU, leur quantite disponible et leur prix public en XAF.
+- `POST /api/external/quotes` : calcule un devis a partir des SKU et quantites demandees, avec un indicateur `can_fulfill`.
+
+Exemple de devis :
+
+```http
+POST /api/external/quotes
+Content-Type: application/json
+Accept: application/json
+
+{
+  "items": [
+    { "sku": "JUS-MANGUE-50", "quantity": 3 }
+  ]
+}
+```
+
+### Demo HTML API
+
+Une page statique de test est disponible dans `public/api-demo.html`. Elle permet de se connecter, lire les ressources protegees, consulter les nouvelles API internes dashboard et tester les nouvelles API externes catalogue/devis.
+
 ### Exemple production
 
 ```json
